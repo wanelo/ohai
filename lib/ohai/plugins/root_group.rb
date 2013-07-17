@@ -17,7 +17,6 @@
 
 provides 'root_group'
 
-
 if RUBY_PLATFORM =~ /msin|mingw|windows/
 
   require 'ffi'
@@ -27,28 +26,6 @@ if RUBY_PLATFORM =~ /msin|mingw|windows/
   # properly in environments with a renamed or localized name for the
   # Administrators group
   BUILTIN_ADMINISTRATORS_SID = 'S-1-5-32-544'
-
-  module Win32
-    extend FFI::Library
-    ffi_lib 'user32'
-    attach_function :messageBox,
-    :MessageBoxA,[ :pointer, :string, :string, :long ], :int
-  end
-
-  module Win32
-    extend FFI::Library
-    ffi_lib 'advapi32'
-    attach_function :regDeleteKeyEx,
-    :RegDeleteKeyExA,[ :long, :pointer, :long, :long ], :long
-  end
-
-  module Win32
-    extend FFI::Library
-    ffi_lib 'advapi32'
-    attach_function :regDeleteKey,
-    :RegDeleteKeyA,[ :long, :pointer], :long
-  end
-
 
   module Win32
     extend FFI::Library
