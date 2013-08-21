@@ -65,6 +65,18 @@ module Ohai
       plugin
     end
 
+    def run_list
+      @plugins = collect_plugins
+      @num_plugins = @plugins.size
+      @num_visited = 0
+
+      list = []
+      while @num_visited < @num_plugins
+        visit(next_unvisited, list)
+      end
+      list
+    end
+
     private
 
     def collect_provides(plugin)
@@ -83,6 +95,59 @@ module Ohai
 
         a[:providers] ||= []
         a[:providers] << plugin
+      end
+    end
+
+    def collect_plugins
+      plugins = Mash.new
+      @attributes.keys.sort.each do |attr|
+        a = @attributes[attr]
+        a.keys.sort.each do |attr_k|
+          add_providers(a[attr_k][:providers], plugins) unless attr_k == "providers"
+        end
+        add_providers(a[:providers], plugins) if a.has_key? "providers"
+      end
+      plugins
+    end
+
+    def add_providers(providers, plugins)
+      providers.each do |provider|
+        plugins[provider.to_s] ||= Mash.new
+        p = plugins[provider.to_s]
+        p[:status] = :unvisited
+        p[:object] = provider
+      end
+    end
+
+    def next_unvisited
+      @plugins.each do |plgn, vals|
+        return plgn if vals[:status] == :unvisited
+      end
+    end
+
+    def visit(plugin, list)
+      status = @plugins[plugin][:status]
+      if status == :tmpvisit
+        Ohai::Log.warn("Circular dependencies.")
+      elsif status == :unvisited
+        p = @plugins[plugin]
+        p[:status] = :tmpvisit
+        p[:object].depends_attrs.sort.each do |dependency|
+          parts = dependency.split('/')
+          a = @attributes
+          unless parts.length == 0
+            parts.each do |part|
+              next if part == Ohai::OS.collect_os
+              a = a[part]
+            end
+          end
+          a[:providers].each do |provider|
+            visit(provider.to_s, list)
+          end
+        end
+        @num_visited += 1
+        p[:status] = :visited
+        list << p[:object]
       end
     end
 
