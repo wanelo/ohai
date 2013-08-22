@@ -65,7 +65,7 @@ module Ohai
       plugin
     end
 
-    def run_list
+    def resolve_dependencies
       @plugins = collect_plugins
       @num_plugins = @plugins.size
       @num_visited = 0
@@ -128,7 +128,23 @@ module Ohai
     def visit(plugin, list)
       status = @plugins[plugin][:status]
       if status == :tmpvisit
-        Ohai::Log.warn("Circular dependencies.")
+        # @note: in some cases we have a plugin providing and
+        # depending on the same attribute. although this should be
+        # considered bad practice, there may be necessary cases: for
+        # example, plugin P provides attribute1/attribute2/attribute3
+        # and depends on attribute1/attribute2/attribute4, but since
+        # we will only tolerate level1/level2 attribute
+        # specifications, P writes provides 'attribute1/attribute2'
+        # and depends 'attribute1/attribute2'
+        #
+        # we may be able to consider a work-around where if a plugin
+        # depends on an attribute it provides, there must be another
+        # provider that has not been visited or tmpvisisted yet, and
+        # we can visit that plugin next
+        #
+        # in any case, we should have a way to either verify the
+        # dependency graph is a DAG so we don't enter a cycle
+        Ohai::Log.warn("Dependency cycle detected.")
       elsif status == :unvisited
         p = @plugins[plugin]
         p[:status] = :tmpvisit
@@ -137,6 +153,10 @@ module Ohai
           a = @attributes
           unless parts.length == 0
             parts.each do |part|
+              # @note: this is a silly trick that will be cleaned up
+              # once we implement :on. currently, plugins such as
+              # darwin/network provide the attribute network. we
+              # ignore the os-specific attribute prefix here.
               next if part == Ohai::OS.collect_os
               a = a[part]
             end
