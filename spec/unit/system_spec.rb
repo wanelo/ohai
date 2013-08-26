@@ -358,25 +358,25 @@ Ohai.plugin do
   end
 end
 EOF
-          loader = Ohai::Loader.new(@ohai)
-          plugins = []
-          [str1, str2, str3].each_with_index do |str, idx|
-            filename = "#{tmp}/plugins/str#{idx}.rb"
-            file = File.open(filename, "w+")
-            file.write(str)
-            file.close
-
-            plugins << loader.load_plugin(filename)
-          end
-          @plugin1, @plugin2, @plugin3 = plugins
+        loader = Ohai::Loader.new(@ohai)
+        plugins = []
+        [str1, str2, str3].each_with_index do |str, idx|
+          filename = "#{tmp}/plugins/str#{idx}.rb"
+          file = File.open(filename, "w+")
+          file.write(str)
+          file.close
+          
+          plugins << loader.load_plugin(filename)
         end
+        @plugin1, @plugin2, @plugin3 = plugins
+      end
 
-        it "should log an error" do
-          Ohai::Log.should_receive(:error).with(/Dependency cycle detected/)
-          @ohai.run_plugins
-        end
+      it "should log an error" do
+        Ohai::Log.should_receive(:error).with(/Dependency cycle detected/)
+        @ohai.run_plugins
       end
     end
-    
   end
+    
 end
+
